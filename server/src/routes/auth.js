@@ -78,6 +78,11 @@ router.post("/signup", async (req, res) => {
   try {
     await sendOtpEmail(email, otp, "Signup");
   } catch (error) {
+    console.error("Signup OTP send failed", {
+      message: error?.message,
+      code: error?.code,
+      response: error?.response
+    });
     return res.status(500).json({ message: "OTP send failed. Please check email credentials." });
   }
 
@@ -184,6 +189,11 @@ router.post("/forgot-password", async (req, res) => {
   try {
     await sendOtpEmail(email, otp, "Password Reset");
   } catch (error) {
+    console.error("Reset OTP send failed", {
+      message: error?.message,
+      code: error?.code,
+      response: error?.response
+    });
     return res.status(500).json({ message: "OTP send failed. Please check email credentials." });
   }
 
