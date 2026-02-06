@@ -10,7 +10,10 @@ const Signup = () => {
     email: "",
     password: ""
   });
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState("signup");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   const handleChange = (event) => {
@@ -20,15 +23,48 @@ const Signup = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setMessage("");
     setBusy(true);
 
     try {
-      const data = await apiFetch("/api/auth/signup", {
+      if (step === "signup") {
+        const data = await apiFetch("/api/auth/signup", {
+          method: "POST",
+          body: JSON.stringify(form)
+        });
+        if (data.needsVerification) {
+          setStep("verify");
+          setMessage("OTP sent to your email.");
+          return;
+        }
+      }
+
+      if (step === "verify") {
+        const data = await apiFetch("/api/auth/verify-signup-otp", {
+          method: "POST",
+          body: JSON.stringify({ email: form.email, otp })
+        });
+        localStorage.setItem("pp_token", data.token);
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    setError("");
+    setMessage("");
+    setBusy(true);
+
+    try {
+      await apiFetch("/api/auth/signup", {
         method: "POST",
         body: JSON.stringify(form)
       });
-      localStorage.setItem("pp_token", data.token);
-      navigate("/dashboard");
+      setMessage("OTP resent to your email.");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -43,57 +79,94 @@ const Signup = () => {
         <p className="mt-2 text-sm text-ink/70 dark:text-white/70">Set up your account to register your cars.</p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="text-xs uppercase tracking-[0.2em]">Name</label>
-            <input
-              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-[0.2em]">Phone</label>
-            <input
-              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-[0.2em]">Email</label>
-            <input
-              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-[0.2em]">Password</label>
-            <input
-              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          {step === "signup" ? (
+            <>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">Name</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">Phone</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">Email</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">Password</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">Email</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-ink/70 dark:border-white/10 dark:bg-darkCard dark:text-white/80"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.2em]">OTP</label>
+                <input
+                  className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+                  name="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <button
+                className="w-full rounded-2xl border border-ink/20 bg-white/70 py-3 text-ink dark:border-white/20 dark:bg-darkCard/70 dark:text-white"
+                type="button"
+                onClick={resendOtp}
+                disabled={busy}
+              >
+                Resend OTP
+              </button>
+            </>
+          )}
 
           {error ? <p className="text-sm text-clay">{error}</p> : null}
+          {message ? <p className="text-sm text-moss">{message}</p> : null}
 
           <button
             className="w-full rounded-2xl bg-ink py-3 text-white dark:bg-white dark:text-ink"
             type="submit"
             disabled={busy}
           >
-            {busy ? "Creating..." : "Create account"}
+            {busy ? "Please wait..." : step === "signup" ? "Create account" : "Verify OTP"}
           </button>
         </form>
       </div>

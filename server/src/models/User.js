@@ -6,8 +6,11 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true, unique: true },
     passwordHash: { type: String, required: true },
-    resetToken: { type: String },
-    resetExpiry: { type: Number }
+    isVerified: { type: Boolean, default: false },
+    signupOtpHash: { type: String },
+    signupOtpExpiry: { type: Number },
+    resetOtpHash: { type: String },
+    resetOtpExpiry: { type: Number }
   },
   { timestamps: true }
 );

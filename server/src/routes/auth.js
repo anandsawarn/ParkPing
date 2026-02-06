@@ -1,15 +1,33 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 import User from "../models/User.js";
 import auth from "../middleware/auth.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 
 const signToken = (userId) => {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET || "dev-secret", {
     expiresIn: "7d"
+  });
+};
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+
+const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+const sendOtpEmail = async (email, otp, context) => {
+  const subject = `ParkPing ${context} OTP`;
+  const text = `Your ParkPing OTP is ${otp}. It expires in 5 minutes.`;
+
+  await sendEmail({
+    to: email,
+    subject,
+    text,
+    html: `<p>Your ParkPing OTP is <strong>${otp}</strong>.</p><p>It expires in 5 minutes.</p>`
   });
 };
 
@@ -20,15 +38,72 @@ router.post("/signup", async (req, res) => {
   }
 
   const existing = await User.findOne({ email });
-  if (existing) {
+  if (existing && existing.isVerified) {
     return res.status(409).json({ message: "Email already registered" });
   }
 
+  const otp = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const otpExpiry = Date.now() + OTP_EXPIRY_MS;
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = await User.create({ name, phone, email, passwordHash });
-  const token = signToken(user._id);
+
+  let user = existing;
+  if (user) {
+    user.name = name;
+    user.phone = phone;
+    user.passwordHash = passwordHash;
+    user.signupOtpHash = otpHash;
+    user.signupOtpExpiry = otpExpiry;
+    user.isVerified = false;
+    await user.save();
+  } else {
+    user = await User.create({
+      name,
+      phone,
+      email,
+      passwordHash,
+      isVerified: false,
+      signupOtpHash: otpHash,
+      signupOtpExpiry: otpExpiry
+    });
+  }
+
+  await sendOtpEmail(email, otp, "Signup");
 
   return res.status(201).json({
+    message: "OTP sent to email",
+    needsVerification: true,
+    email
+  });
+});
+
+router.post("/verify-signup-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and OTP are required" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user || !user.signupOtpHash || !user.signupOtpExpiry) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
+
+  if (Date.now() > user.signupOtpExpiry) {
+    return res.status(400).json({ message: "OTP expired" });
+  }
+
+  const validOtp = await bcrypt.compare(otp, user.signupOtpHash);
+  if (!validOtp) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  user.isVerified = true;
+  user.signupOtpHash = undefined;
+  user.signupOtpExpiry = undefined;
+  await user.save();
+
+  const token = signToken(user._id);
+  return res.json({
     token,
     user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
   });
@@ -43,6 +118,10 @@ router.post("/login", async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) {
     return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  if (!user.isVerified) {
+    return res.status(403).json({ message: "Please verify your email OTP" });
   }
 
   const match = await bcrypt.compare(password, user.passwordHash);
@@ -74,52 +153,48 @@ router.post("/forgot-password", async (req, res) => {
 
   const user = await User.findOne({ email });
   if (!user) {
-    return res.json({ message: "If email exists, reset link will be sent" });
+    return res.json({ message: "If email exists, an OTP will be sent" });
   }
 
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  const resetTokenHash = await bcrypt.hash(resetToken, 10);
-  const resetExpiry = Date.now() + 3600000;
+  const otp = generateOtp();
+  const otpHash = await bcrypt.hash(otp, 10);
+  const otpExpiry = Date.now() + OTP_EXPIRY_MS;
 
-  user.resetToken = resetTokenHash;
-  user.resetExpiry = resetExpiry;
+  user.resetOtpHash = otpHash;
+  user.resetOtpExpiry = otpExpiry;
   await user.save();
 
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-  const resetLink = `${clientUrl}/reset-password?token=${resetToken}&email=${email}`;
-
-  console.log(`Password reset link: ${resetLink}`);
+  await sendOtpEmail(email, otp, "Password Reset");
 
   return res.json({
-    message: "Password reset link sent (check console in dev mode)",
-    resetLink
+    message: "OTP sent to email"
   });
 });
 
 router.post("/reset-password", async (req, res) => {
-  const { token, password, email } = req.body;
+  const { otp, password, email } = req.body;
 
-  if (!token || !password || !email) {
-    return res.status(400).json({ message: "Token, email and password are required" });
+  if (!otp || !password || !email) {
+    return res.status(400).json({ message: "OTP, email and password are required" });
   }
 
   const user = await User.findOne({ email });
-  if (!user || !user.resetToken || !user.resetExpiry) {
-    return res.status(400).json({ message: "Invalid or expired reset token" });
+  if (!user || !user.resetOtpHash || !user.resetOtpExpiry) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
   }
 
-  if (Date.now() > user.resetExpiry) {
-    return res.status(400).json({ message: "Reset token expired" });
+  if (Date.now() > user.resetOtpExpiry) {
+    return res.status(400).json({ message: "OTP expired" });
   }
 
-  const validToken = await bcrypt.compare(token, user.resetToken);
-  if (!validToken) {
-    return res.status(400).json({ message: "Invalid reset token" });
+  const validOtp = await bcrypt.compare(otp, user.resetOtpHash);
+  if (!validOtp) {
+    return res.status(400).json({ message: "Invalid OTP" });
   }
 
   user.passwordHash = await bcrypt.hash(password, 10);
-  user.resetToken = undefined;
-  user.resetExpiry = undefined;
+  user.resetOtpHash = undefined;
+  user.resetOtpExpiry = undefined;
   await user.save();
 
   return res.json({ message: "Password reset successful" });

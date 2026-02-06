@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api.js";
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -18,7 +20,10 @@ const ForgotPassword = () => {
         method: "POST",
         body: JSON.stringify({ email })
       });
-      setMessage(data.message || "Password reset instructions sent to your email.");
+      setMessage(data.message || "OTP sent to your email.");
+      setTimeout(() => {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      }, 800);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -31,7 +36,7 @@ const ForgotPassword = () => {
       <div className="card fade-up">
         <h2 className="font-display text-2xl sm:text-3xl">Forgot password</h2>
         <p className="mt-2 text-sm text-ink/70 dark:text-white/70">
-          Enter your email and we'll send you a reset link.
+          Enter your email and we'll send you an OTP.
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -55,7 +60,7 @@ const ForgotPassword = () => {
             type="submit"
             disabled={busy}
           >
-            {busy ? "Sending..." : "Send reset link"}
+            {busy ? "Sending..." : "Send OTP"}
           </button>
         </form>
       </div>
