@@ -150,16 +150,10 @@ const Scan = () => {
         <div className="glass border border-ink/10 bg-white/70 p-4 text-center dark:border-white/10 dark:bg-darkCard/70">
           <p className="text-xs uppercase tracking-[0.3em] text-ink/50 dark:text-white/50">Smile Line</p>
           <p className="mt-2 text-base font-semibold text-ink dark:text-white">{quote}</p>
-          <p className="mt-1 text-xs text-ink/60 dark:text-white/60">Thank you for helping keep things moving.</p>
+          
         </div>
 
-        {/* Note */}
-        <div className="glass border border-moss/20 bg-moss/5 p-4 dark:border-tide/20 dark:bg-tide/5">
-          <p className="text-xs uppercase tracking-[0.3em] text-moss dark:text-tide">Note</p>
-          <p className="mt-2 text-sm text-ink dark:text-white">
-            "Please move the vehicle if it is blocking access. Thank you."
-          </p>
-        </div>
+       
 
         {/* Contact Buttons */}
         <div className="space-y-3">
