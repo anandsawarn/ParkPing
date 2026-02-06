@@ -9,8 +9,10 @@ const userSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     signupOtpHash: { type: String },
     signupOtpExpiry: { type: Number },
+    signupOtpSentAt: { type: Number },
     resetOtpHash: { type: String },
-    resetOtpExpiry: { type: Number }
+    resetOtpExpiry: { type: Number },
+    resetOtpSentAt: { type: Number }
   },
   { timestamps: true }
 );

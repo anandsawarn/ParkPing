@@ -13,7 +13,8 @@ const signToken = (userId) => {
   });
 };
 
-const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 
 const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -42,6 +43,10 @@ router.post("/signup", async (req, res) => {
     return res.status(409).json({ message: "Email already registered" });
   }
 
+  if (existing?.signupOtpSentAt && Date.now() - existing.signupOtpSentAt < OTP_RESEND_COOLDOWN_MS) {
+    return res.status(429).json({ message: "Please wait before requesting a new OTP." });
+  }
+
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, 10);
   const otpExpiry = Date.now() + OTP_EXPIRY_MS;
@@ -54,6 +59,7 @@ router.post("/signup", async (req, res) => {
     user.passwordHash = passwordHash;
     user.signupOtpHash = otpHash;
     user.signupOtpExpiry = otpExpiry;
+    user.signupOtpSentAt = Date.now();
     user.isVerified = false;
     await user.save();
   } else {
@@ -64,11 +70,16 @@ router.post("/signup", async (req, res) => {
       passwordHash,
       isVerified: false,
       signupOtpHash: otpHash,
-      signupOtpExpiry: otpExpiry
+      signupOtpExpiry: otpExpiry,
+      signupOtpSentAt: Date.now()
     });
   }
 
-  await sendOtpEmail(email, otp, "Signup");
+  try {
+    await sendOtpEmail(email, otp, "Signup");
+  } catch (error) {
+    return res.status(500).json({ message: "OTP send failed. Please check email credentials." });
+  }
 
   return res.status(201).json({
     message: "OTP sent to email",
@@ -100,6 +111,7 @@ router.post("/verify-signup-otp", async (req, res) => {
   user.isVerified = true;
   user.signupOtpHash = undefined;
   user.signupOtpExpiry = undefined;
+  user.signupOtpSentAt = undefined;
   await user.save();
 
   const token = signToken(user._id);
@@ -156,15 +168,24 @@ router.post("/forgot-password", async (req, res) => {
     return res.json({ message: "If email exists, an OTP will be sent" });
   }
 
+  if (user.resetOtpSentAt && Date.now() - user.resetOtpSentAt < OTP_RESEND_COOLDOWN_MS) {
+    return res.status(429).json({ message: "Please wait before requesting a new OTP." });
+  }
+
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, 10);
   const otpExpiry = Date.now() + OTP_EXPIRY_MS;
 
   user.resetOtpHash = otpHash;
   user.resetOtpExpiry = otpExpiry;
+  user.resetOtpSentAt = Date.now();
   await user.save();
 
-  await sendOtpEmail(email, otp, "Password Reset");
+  try {
+    await sendOtpEmail(email, otp, "Password Reset");
+  } catch (error) {
+    return res.status(500).json({ message: "OTP send failed. Please check email credentials." });
+  }
 
   return res.json({
     message: "OTP sent to email"
@@ -195,6 +216,7 @@ router.post("/reset-password", async (req, res) => {
   user.passwordHash = await bcrypt.hash(password, 10);
   user.resetOtpHash = undefined;
   user.resetOtpExpiry = undefined;
+  user.resetOtpSentAt = undefined;
   await user.save();
 
   return res.json({ message: "Password reset successful" });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api.js";
 
@@ -12,6 +12,7 @@ const Signup = () => {
   });
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("signup");
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,6 +35,7 @@ const Signup = () => {
         });
         if (data.needsVerification) {
           setStep("verify");
+          setCooldown(30);
           setMessage("OTP sent to your email.");
           return;
         }
@@ -64,6 +66,7 @@ const Signup = () => {
         method: "POST",
         body: JSON.stringify(form)
       });
+      setCooldown(30);
       setMessage("OTP resent to your email.");
     } catch (err) {
       setError(err.message);
@@ -71,6 +74,18 @@ const Signup = () => {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (cooldown <= 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   return (
     <section className="mx-auto max-w-lg">
@@ -146,14 +161,15 @@ const Signup = () => {
                   maxLength={6}
                   required
                 />
+                <p className="mt-2 text-xs text-ink/60 dark:text-white/60">OTP is valid for 10 minutes.</p>
               </div>
               <button
                 className="w-full rounded-2xl border border-ink/20 bg-white/70 py-3 text-ink dark:border-white/20 dark:bg-darkCard/70 dark:text-white"
                 type="button"
                 onClick={resendOtp}
-                disabled={busy}
+                disabled={busy || cooldown > 0}
               >
-                Resend OTP
+                {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
               </button>
             </>
           )}
