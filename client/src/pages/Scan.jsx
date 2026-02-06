@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiFetch } from "../utils/api.js";
 
+const QUOTES = [
+  "Thanks for being the hero of the parking lot.",
+  "Small kindness, big parking karma.",
+  "Parking peace restored, one scan at a time.",
+  "Your scan just made someone's day easier.",
+  "Good drivers move mountains, or at least cars."
+];
+
 const Scan = () => {
   const { id } = useParams();
   const [car, setCar] = useState(null);
@@ -11,6 +19,7 @@ const Scan = () => {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [quote, setQuote] = useState("");
 
   useEffect(() => {
     const loadCar = async () => {
@@ -29,6 +38,11 @@ const Scan = () => {
 
     loadCar();
   }, [id]);
+
+  useEffect(() => {
+    const pick = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+    setQuote(pick);
+  }, []);
 
   const cleanPhone = (value) => value.replace(/[^0-9+]/g, "");
 
@@ -132,9 +146,16 @@ const Scan = () => {
           </div>
         </div>
 
+        {/* Friendly Quote */}
+        <div className="glass border border-ink/10 bg-white/70 p-4 text-center dark:border-white/10 dark:bg-darkCard/70">
+          <p className="text-xs uppercase tracking-[0.3em] text-ink/50 dark:text-white/50">Smile Line</p>
+          <p className="mt-2 text-base font-semibold text-ink dark:text-white">{quote}</p>
+          <p className="mt-1 text-xs text-ink/60 dark:text-white/60">Thank you for helping keep things moving.</p>
+        </div>
+
         {/* Note */}
         <div className="glass border border-moss/20 bg-moss/5 p-4 dark:border-tide/20 dark:bg-tide/5">
-          <p className="text-xs uppercase tracking-[0.3em] text-moss dark:text-tide">📌 Note</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-moss dark:text-tide">Note</p>
           <p className="mt-2 text-sm text-ink dark:text-white">
             "Please move the vehicle if it is blocking access. Thank you."
           </p>
