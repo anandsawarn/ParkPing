@@ -108,6 +108,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [cars, setCars] = useState([]);
   const [qrMap, setQrMap] = useState({});
+  const [emailStatus, setEmailStatus] = useState({});
+  const [emailBusyId, setEmailBusyId] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [dialogState, setDialogState] = useState({
@@ -138,6 +140,19 @@ const Dashboard = () => {
       setQrMap((prev) => ({ ...prev, [carId]: data.dataUrl }));
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleEmailQr = async (carId) => {
+    setEmailBusyId(carId);
+    setEmailStatus((prev) => ({ ...prev, [carId]: "Sending..." }));
+    try {
+      const data = await apiFetch(`/api/cars/${carId}/send-qr`, { method: "POST" });
+      setEmailStatus((prev) => ({ ...prev, [carId]: data.message || "QR emailed" }));
+    } catch (err) {
+      setEmailStatus((prev) => ({ ...prev, [carId]: err.message || "Failed to send" }));
+    } finally {
+      setEmailBusyId(null);
     }
   };
 
@@ -217,6 +232,13 @@ const Dashboard = () => {
                     Get QR
                   </button>
                   <button
+                    className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-sm sm:px-4 dark:border-white/20 dark:bg-darkCard/70"
+                    onClick={() => handleEmailQr(car._id)}
+                    disabled={emailBusyId === car._id}
+                  >
+                    {emailBusyId === car._id ? "Sending..." : "Email QR"}
+                  </button>
+                  <button
                     className="rounded-full border border-moss/20 bg-moss/10 px-3 py-2 text-sm text-moss sm:px-4 dark:border-moss/20 dark:bg-moss/10 dark:text-tide"
                     onClick={() => openEditDialog(car._id, car.carNumber)}
                   >
@@ -259,6 +281,9 @@ const Dashboard = () => {
                   >
                     Download FASTag QR
                   </button>
+                  {emailStatus[car._id] ? (
+                    <p className="text-sm text-ink/70 dark:text-white/70">{emailStatus[car._id]}</p>
+                  ) : null}
                 </div>
               ) : null}
             </div>

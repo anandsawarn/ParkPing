@@ -41,7 +41,24 @@ const parseFrom = (fromValue) => {
   };
 };
 
-const sendWithBrevoApi = async ({ to, subject, text, html }) => {
+const normalizeBrevoAttachments = (attachments = []) => {
+  return attachments
+    .map((attachment) => {
+      const name = attachment.filename || attachment.name || "attachment";
+      if (Buffer.isBuffer(attachment.content)) {
+        return { name, content: attachment.content.toString("base64") };
+      }
+
+      if (typeof attachment.content === "string") {
+        return { name, content: attachment.content };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+};
+
+const sendWithBrevoApi = async ({ to, subject, text, html, attachments }) => {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     throw new Error("BREVO_API_KEY is missing");
@@ -49,6 +66,8 @@ const sendWithBrevoApi = async ({ to, subject, text, html }) => {
 
   const fromValue = process.env.SMTP_FROM || process.env.SMTP_USER;
   const sender = parseFrom(fromValue);
+
+  const brevoAttachments = normalizeBrevoAttachments(attachments);
 
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -62,7 +81,8 @@ const sendWithBrevoApi = async ({ to, subject, text, html }) => {
       to: [{ email: to }],
       subject,
       textContent: text,
-      htmlContent: html
+      htmlContent: html,
+      attachments: brevoAttachments.length ? brevoAttachments : undefined
     })
   });
 
@@ -72,7 +92,7 @@ const sendWithBrevoApi = async ({ to, subject, text, html }) => {
   }
 };
 
-export const sendEmail = async ({ to, subject, text, html }) => {
+export const sendEmail = async ({ to, subject, text, html, attachments = [] }) => {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   try {
@@ -82,7 +102,8 @@ export const sendEmail = async ({ to, subject, text, html }) => {
       to,
       subject,
       text,
-      html
+      html,
+      attachments
     });
   } catch (error) {
     if (!process.env.BREVO_API_KEY) {
@@ -90,6 +111,6 @@ export const sendEmail = async ({ to, subject, text, html }) => {
     }
 
     // Fallback to Brevo HTTP API when SMTP is blocked/timeouts on Render.
-    await sendWithBrevoApi({ to, subject, text, html });
+    await sendWithBrevoApi({ to, subject, text, html, attachments });
   }
 };
