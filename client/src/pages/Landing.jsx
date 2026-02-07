@@ -6,11 +6,12 @@ const Landing = () => {
       <section className="mx-auto max-w-3xl space-y-6 text-center">
         <div className="chip mx-auto dark:border-white/20 dark:bg-darkCard/70">Smart parking contact layer</div>
         <h1 className="font-display text-3xl leading-tight sm:text-5xl md:text-6xl">
-          Contact any car owner without exposing your number
+          Reach a car owner fast without exposing your number
         </h1>
         <p className="mx-auto max-w-xl text-base text-ink/70 sm:text-lg dark:text-white/70">
-          ParkPing solves the problem of blocked parking by providing a secure QR-based contact
-          system. No more awkward number exchanges or privacy concerns.
+          ParkPing solves blocked parking with a secure QR-based contact flow. Scan the tag, call or
+          message the owner, and keep personal numbers private. Add an optional emergency contact
+          for urgent situations.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link
@@ -35,8 +36,7 @@ const Landing = () => {
           </div>
           <h3 className="font-display text-lg sm:text-xl">Register your vehicles</h3>
           <p className="text-sm text-ink/70 dark:text-white/70">
-            Add all your cars with contact details. Each car gets a unique QR code with a custom
-            message.
+            Add vehicles with contact details. Each car gets a unique QR code with a custom quote.
           </p>
         </div>
 
@@ -46,7 +46,7 @@ const Landing = () => {
           </div>
           <h3 className="font-display text-lg sm:text-xl">Scan & Contact</h3>
           <p className="text-sm text-ink/70 dark:text-white/70">
-            Anyone can scan your QR and instantly call, SMS, or WhatsApp—without seeing your actual
+            Anyone can scan the QR and instantly call, SMS, or WhatsApp without seeing your actual
             number.
           </p>
         </div>
@@ -57,8 +57,18 @@ const Landing = () => {
           </div>
           <h3 className="font-display text-lg sm:text-xl">Privacy first</h3>
           <p className="text-sm text-ink/70 dark:text-white/70">
-            Phone numbers are masked. Only verified QR scans can trigger contact actions. Your data
-            stays safe.
+            Phone numbers are masked. Only QR scans can trigger contact actions. Your data stays
+            safe.
+          </p>
+        </div>
+
+        <div className="card grid-glow space-y-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-moss/20 text-2xl">
+            🚨
+          </div>
+          <h3 className="font-display text-lg sm:text-xl">Emergency contact</h3>
+          <p className="text-sm text-ink/70 dark:text-white/70">
+            Add an optional emergency contact so urgent calls can reach the right person fast.
           </p>
         </div>
       </section>
@@ -86,7 +96,7 @@ const Landing = () => {
             </div>
             <h4 className="text-sm font-semibold sm:text-base">Download & stick QR</h4>
             <p className="text-sm text-ink/70 dark:text-white/70">
-              Generate and download the QR with a custom quote. Stick it on your car windshield.
+              Generate and download the QR with a custom quote. Stick it on the windshield.
             </p>
           </div>
 
