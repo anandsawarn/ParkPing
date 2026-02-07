@@ -84,6 +84,12 @@ const parseImageDataUrl = (imageDataUrl) => {
   };
 };
 
+const getImageExtension = (contentType) => {
+  if (contentType === "image/jpeg") return "jpg";
+  if (contentType === "image/webp") return "webp";
+  return "png";
+};
+
 router.post("/:id/send-qr", auth, async (req, res) => {
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
   if (!car) {
@@ -101,7 +107,9 @@ router.post("/:id/send-qr", auth, async (req, res) => {
     const parsedImage = parseImageDataUrl(req.body?.imageDataUrl);
     const attachment = parsedImage
       ? {
-          filename: `parkping-${car.carNumber || "car"}-card.png`,
+          filename: `parkping-${car.carNumber || "car"}-card.${getImageExtension(
+            parsedImage.contentType
+          )}`,
           content: parsedImage.buffer,
           contentType: parsedImage.contentType || "image/png",
           contentDisposition: "attachment"

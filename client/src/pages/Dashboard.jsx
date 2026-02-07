@@ -97,7 +97,7 @@ const buildQrCardDataUrl = (dataUrl, carNumber, quote) =>
       ctx.font = "bold 16px Trebuchet MS";
       ctx.fillText("SCAN TO CONTACT →", 40, canvas.height - 100);
 
-      resolve(canvas.toDataURL("image/jpeg", 0.9));
+      resolve(canvas.toDataURL("image/png"));
     };
     image.onerror = () => reject(new Error("QR image failed to load"));
     image.src = dataUrl;
