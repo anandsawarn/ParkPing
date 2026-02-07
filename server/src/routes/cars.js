@@ -1,4 +1,5 @@
 import express from "express";
+import PDFDocument from "pdfkit";
 import qrcode from "qrcode";
 import auth from "../middleware/auth.js";
 import Car from "../models/Car.js";
@@ -68,6 +69,42 @@ const getQuoteForCar = (car) => {
   return QUOTES[index];
 };
 
+const buildFastagPdf = ({ carNumber, quote, qrBuffer, userName }) =>
+  new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: [640, 360], margin: 0 });
+    const chunks = [];
+
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.rect(0, 0, 640, 360).fill("#0b5db7");
+    doc.fillColor("#0a4d97").rect(0, 0, 640, 60).fill();
+    doc.fillColor("#0a4d97").rect(0, 300, 640, 60).fill();
+
+    doc.fillColor("white").fontSize(26).text("ParkPing", 40, 20);
+    doc.fontSize(12).text("Smart Parking Contact", 40, 50);
+
+    doc.fontSize(20).text(carNumber || "CAR", 40, 110);
+    doc.fontSize(12).text(quote, 40, 145, { width: 340, lineGap: 2 });
+
+    doc.fillColor("#ff6b35").fontSize(12).text("SCAN TO CONTACT ->", 40, 250);
+
+    doc.fillColor("white").rect(430, 90, 160, 160).fill();
+    doc.image(qrBuffer, 440, 100, { fit: [140, 140] });
+
+    doc.fillColor("white")
+      .fontSize(10)
+      .text(
+        `Hi ${userName || "there"}, print this card and stick it on your car windshield.`,
+        40,
+        305,
+        { width: 560 }
+      );
+
+    doc.end();
+  });
+
 router.post("/:id/send-qr", auth, async (req, res) => {
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
   if (!car) {
@@ -83,63 +120,30 @@ router.post("/:id/send-qr", auth, async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const payload = `${clientUrl}/scan/${car._id}`;
     const qrBuffer = await qrcode.toBuffer(payload, { margin: 1, width: 320 });
-    const qrBase64 = qrBuffer.toString("base64");
+
+    const pdfBuffer = await buildFastagPdf({
+      carNumber: car.carNumber,
+      quote: getQuoteForCar(car),
+      qrBuffer,
+      userName: user.name
+    });
 
     const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Trebuchet MS, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-            .card { background: linear-gradient(135deg, #0066cc 0%, #004c99 100%); color: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            .header { font-size: 32px; font-weight: bold; margin-bottom: 10px; }
-            .subheader { font-size: 14px; margin-bottom: 20px; opacity: 0.9; }
-            .car-info { margin: 20px 0; }
-            .car-number { font-size: 22px; font-weight: bold; margin: 10px 0; }
-            .quote { font-size: 16px; margin: 15px 0; line-height: 1.5; }
-            .cta { color: #ff6b35; font-weight: bold; font-size: 14px; margin-top: 20px; }
-            .qr-section { text-align: center; margin: 30px 0; }
-            .qr-section img { width: 200px; height: 200px; border: 10px solid white; border-radius: 8px; }
-            .footer { font-size: 12px; opacity: 0.8; margin-top: 20px; line-height: 1.6; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <div class="header">🅿️ ParkPing</div>
-            <div class="subheader">Smart Parking Contact</div>
-            
-            <div class="car-info">
-              <div class="car-number">${car.carNumber}</div>
-              <div class="quote">${getQuoteForCar(car)}</div>
-              <div class="cta">SCAN TO CONTACT →</div>
-            </div>
-            
-            <div class="qr-section">
-              <img src="cid:qr-image" alt="QR Code" />
-            </div>
-            
-            <div class="footer">
-              <p>Hi ${user.name || "there"},</p>
-              <p>Download this email or take a screenshot and print it. Stick the QR code on your car windshield for easy contact when your car is parked.</p>
-              <p>Anyone scanning the QR can reach you securely.</p>
-            </div>
-          </div>
-        </body>
-      </html>
+      <p>Hi ${user.name || "there"},</p>
+      <p>Your ParkPing card is attached as a PDF. Please print it and stick it on your car windshield.</p>
+      <p>Anyone scanning the QR can reach you securely.</p>
     `;
 
     await sendEmail({
       to: user.email,
       subject: `Your ParkPing QR - ${car.carNumber}`,
-      text: `Hi ${user.name || "there"}, download this email and print it. Stick on your car windshield.`,
+      text: `Hi ${user.name || "there"}, your ParkPing card PDF is attached. Print and stick it on your car windshield.`,
       html: htmlContent,
       attachments: [
         {
-          filename: `parkping-qr.png`,
-          content: qrBuffer,
-          cid: "qr-image",
-          contentType: "image/png",
-          contentDisposition: "inline"
+          filename: `parkping-${car.carNumber || "car"}-card.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
         }
       ]
     });
