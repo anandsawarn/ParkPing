@@ -10,7 +10,8 @@ const carSchema = new mongoose.Schema(
     contactName: { type: String, required: true, trim: true },
     contactPhone: { type: String, required: true, trim: true },
     emergencyContactName: { type: String, trim: true },
-    emergencyContactPhone: { type: String, trim: true }
+    emergencyContactPhone: { type: String, trim: true },
+    qrActive: { type: Boolean, default: true }
   },
   { timestamps: true }
 );

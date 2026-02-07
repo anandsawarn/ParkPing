@@ -141,7 +141,7 @@ router.delete("/:id", auth, async (req, res) => {
 
 router.get("/:id/public", async (req, res) => {
   const car = await Car.findById(req.params.id).select(
-    "carNumber carModel carCompany carColor contactName contactPhone emergencyContactName emergencyContactPhone"
+    "carNumber carModel carCompany carColor contactName contactPhone emergencyContactName emergencyContactPhone qrActive"
   );
   if (!car) {
     return res.status(404).json({ message: "Car not found" });
@@ -161,7 +161,8 @@ router.get("/:id/public", async (req, res) => {
       carModel: car.carModel,
       carCompany: car.carCompany,
       carColor: car.carColor,
-      contactName: car.contactName
+      contactName: car.contactName,
+      qrActive: car.qrActive
     },
     maskedPhone: maskPhone(car.contactPhone),
     contactPhone: car.contactPhone,
@@ -169,6 +170,23 @@ router.get("/:id/public", async (req, res) => {
     emergencyMaskedPhone: emergencyContact ? maskPhone(emergencyContact.phone) : "",
     contactOptions: ["call", "sms", "whatsapp"]
   });
+});
+
+router.put("/:id/qr-status", auth, async (req, res) => {
+  const { qrActive } = req.body;
+  if (typeof qrActive !== "boolean") {
+    return res.status(400).json({ message: "qrActive must be boolean" });
+  }
+
+  const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
+  if (!car) {
+    return res.status(404).json({ message: "Car not found" });
+  }
+
+  car.qrActive = qrActive;
+  await car.save();
+
+  return res.json({ car });
 });
 
 export default router;

@@ -148,6 +148,18 @@ const Dashboard = () => {
     }
   };
 
+  const handleQrStatusToggle = async (carId, nextStatus) => {
+    try {
+      const data = await apiFetch(`/api/cars/${carId}/qr-status`, {
+        method: "PUT",
+        body: JSON.stringify({ qrActive: nextStatus })
+      });
+      setCars((prev) => prev.map((car) => (car._id === carId ? data.car : car)));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
 
   const openDeleteDialog = (carId, carNumber) => {
     setDialogState({
@@ -222,6 +234,21 @@ const Dashboard = () => {
                       {car.emergencyContactPhone ? ` · ${car.emergencyContactPhone}` : ""}
                     </p>
                   )}
+                  <div className="mt-3 flex items-center gap-2 text-xs font-semibold">
+                    <span className={car.qrActive ? "text-moss dark:text-tide" : "text-clay"}>
+                      {car.qrActive ? "QR Active" : "QR Disabled"}
+                    </span>
+                    <button
+                      className={`rounded-full border px-2 py-1 ${
+                        car.qrActive
+                          ? "border-clay/30 bg-clay/10 text-clay"
+                          : "border-moss/30 bg-moss/10 text-moss dark:border-tide/30 dark:bg-tide/10 dark:text-tide"
+                      }`}
+                      onClick={() => handleQrStatusToggle(car._id, !car.qrActive)}
+                    >
+                      {car.qrActive ? "Disable" : "Enable"}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button

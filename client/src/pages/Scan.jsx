@@ -25,6 +25,7 @@ const Scan = () => {
   const [showEmergency, setShowEmergency] = useState(false);
   const [emergencyUnlocked, setEmergencyUnlocked] = useState(false);
   const [quote, setQuote] = useState("");
+  const qrActive = car?.qrActive !== false;
 
   useEffect(() => {
     const loadCar = async () => {
@@ -136,6 +137,23 @@ const Scan = () => {
 
   if (!car) {
     return null;
+  }
+
+  if (!qrActive) {
+    return (
+      <section className="flex min-h-screen items-center justify-center px-4 py-8">
+        <div className="card grid-glow fade-up w-full max-w-xl space-y-4 text-center">
+          <p className="text-4xl">🚫</p>
+          <h2 className="font-display text-2xl sm:text-3xl">Contact disabled</h2>
+          <p className="text-sm text-ink/70 dark:text-white/70">
+            The owner has temporarily disabled contact for this QR.
+          </p>
+          <p className="text-xs text-ink/50 dark:text-white/50">
+            Please try again later or use other official channels.
+          </p>
+        </div>
+      </section>
+    );
   }
 
   return (
