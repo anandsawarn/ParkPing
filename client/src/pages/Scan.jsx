@@ -23,6 +23,7 @@ const Scan = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showEmergency, setShowEmergency] = useState(false);
+  const [emergencyUnlocked, setEmergencyUnlocked] = useState(false);
   const [quote, setQuote] = useState("");
 
   useEffect(() => {
@@ -89,6 +90,22 @@ const Scan = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleEmergencyToggle = () => {
+    if (!emergencyUnlocked) {
+      const confirmed = window.confirm(
+        "This will reveal the emergency contact number. Please use it only for urgent situations."
+      );
+      if (!confirmed) {
+        return;
+      }
+      setEmergencyUnlocked(true);
+      setShowEmergency(true);
+      return;
+    }
+
+    setShowEmergency((prev) => !prev);
   };
 
   if (loading) {
@@ -211,7 +228,7 @@ const Scan = () => {
               </p>
               <button
                 className="rounded-full border border-clay/20 bg-clay/10 px-3 py-1 text-xs font-semibold text-clay"
-                onClick={() => setShowEmergency((prev) => !prev)}
+                onClick={handleEmergencyToggle}
               >
                 {showEmergency ? "Hide" : "Show"}
               </button>

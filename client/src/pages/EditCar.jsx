@@ -57,6 +57,14 @@ const EditCar = () => {
     setError("");
     setBusy(true);
 
+    const hasEmergencyName = Boolean(form.emergencyContactName.trim());
+    const hasEmergencyPhone = Boolean(form.emergencyContactPhone.trim());
+    if ((hasEmergencyName && !hasEmergencyPhone) || (!hasEmergencyName && hasEmergencyPhone)) {
+      setError("Emergency contact name and phone must be provided together.");
+      setBusy(false);
+      return;
+    }
+
     try {
       await apiFetch(`/api/cars/${id}`, {
         method: "PUT",

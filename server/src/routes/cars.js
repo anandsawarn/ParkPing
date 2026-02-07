@@ -24,6 +24,10 @@ router.post("/", auth, async (req, res) => {
   const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
   const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
 
+  if ((normalizedEmergencyName && !normalizedEmergencyPhone) || (!normalizedEmergencyName && normalizedEmergencyPhone)) {
+    return res.status(400).json({ message: "Emergency contact name and phone must be provided together" });
+  }
+
   const car = await Car.create({
     userId: req.user.id,
     carNumber,
@@ -75,6 +79,10 @@ router.put("/:id", auth, async (req, res) => {
 
   const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
   const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
+
+  if ((normalizedEmergencyName && !normalizedEmergencyPhone) || (!normalizedEmergencyName && normalizedEmergencyPhone)) {
+    return res.status(400).json({ message: "Emergency contact name and phone must be provided together" });
+  }
 
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
   if (!car) {
