@@ -8,7 +8,9 @@ const carSchema = new mongoose.Schema(
     carCompany: { type: String, required: true, trim: true },
     carColor: { type: String, required: true, trim: true },
     contactName: { type: String, required: true, trim: true },
-    contactPhone: { type: String, required: true, trim: true }
+    contactPhone: { type: String, required: true, trim: true },
+    emergencyContactName: { type: String, trim: true },
+    emergencyContactPhone: { type: String, trim: true }
   },
   { timestamps: true }
 );

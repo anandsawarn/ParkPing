@@ -10,7 +10,9 @@ const AddCar = () => {
     carCompany: "",
     carColor: "",
     contactName: "",
-    contactPhone: ""
+    contactPhone: "",
+    emergencyContactName: "",
+    emergencyContactPhone: ""
   });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -102,6 +104,26 @@ const AddCar = () => {
               value={form.contactPhone}
               onChange={handleChange}
               required
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em]">Emergency contact name</label>
+            <input
+              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+              name="emergencyContactName"
+              value={form.emergencyContactName}
+              onChange={handleChange}
+              placeholder="Optional"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em]">Emergency contact phone</label>
+            <input
+              className="mt-2 w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-darkCard dark:text-white"
+              name="emergencyContactPhone"
+              value={form.emergencyContactPhone}
+              onChange={handleChange}
+              placeholder="Optional"
             />
           </div>
 

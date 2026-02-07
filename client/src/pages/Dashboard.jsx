@@ -216,6 +216,12 @@ const Dashboard = () => {
                   <p className="mt-2 text-xs uppercase tracking-[0.2em] text-moss dark:text-tide">
                     Contact: {car.contactName || "Driver"}
                   </p>
+                  {(car.emergencyContactName || car.emergencyContactPhone) && (
+                    <p className="mt-1 text-xs text-ink/60 dark:text-white/60">
+                      Emergency: {car.emergencyContactName || "Contact"}
+                      {car.emergencyContactPhone ? ` · ${car.emergencyContactPhone}` : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button

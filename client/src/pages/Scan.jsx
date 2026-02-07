@@ -15,10 +15,14 @@ const Scan = () => {
   const [car, setCar] = useState(null);
   const [maskedPhone, setMaskedPhone] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyMaskedPhone, setEmergencyMaskedPhone] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showEmergency, setShowEmergency] = useState(false);
   const [quote, setQuote] = useState("");
 
   useEffect(() => {
@@ -29,6 +33,9 @@ const Scan = () => {
         setCar(data.car);
         setMaskedPhone(data.maskedPhone);
         setContactPhone(data.contactPhone || "");
+        setEmergencyContactName(data.emergencyContact?.name || "");
+        setEmergencyContactPhone(data.emergencyContact?.phone || "");
+        setEmergencyMaskedPhone(data.emergencyMaskedPhone || "");
       } catch (err) {
         setError(err.message);
       } finally {
@@ -46,13 +53,13 @@ const Scan = () => {
 
   const cleanPhone = (value) => value.replace(/[^0-9+]/g, "");
 
-  const handleContact = (method) => {
-    if (!contactPhone) {
+  const handleContact = (method, phoneValue) => {
+    if (!phoneValue) {
       setNote("Contact number not available.");
       return;
     }
 
-    const phone = cleanPhone(contactPhone);
+    const phone = cleanPhone(phoneValue);
     
     if (method === "call") {
       window.location.href = `tel:${phone}`;
@@ -71,6 +78,14 @@ const Scan = () => {
   const copyPhone = () => {
     if (contactPhone) {
       navigator.clipboard.writeText(contactPhone);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const copyEmergencyPhone = () => {
+    if (emergencyContactPhone) {
+      navigator.clipboard.writeText(emergencyContactPhone);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -163,7 +178,7 @@ const Scan = () => {
           <div className="grid gap-3 sm:grid-cols-3">
             <button
               className="flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-4 font-semibold text-white transition-all hover:bg-blue-600 active:scale-95"
-              onClick={() => handleContact("call")}
+              onClick={() => handleContact("call", contactPhone)}
               title="Call the owner"
             >
               <span className="text-xl">📞</span>
@@ -171,7 +186,7 @@ const Scan = () => {
             </button>
             <button
               className="flex items-center justify-center gap-2 rounded-2xl border-2 border-blue-500 px-4 py-4 font-semibold text-blue-500 transition-all hover:bg-blue-50 active:scale-95 dark:hover:bg-blue-500/10"
-              onClick={() => handleContact("sms")}
+              onClick={() => handleContact("sms", contactPhone)}
               title="Send SMS"
             >
               <span className="text-xl">💬</span>
@@ -179,7 +194,7 @@ const Scan = () => {
             </button>
             <button
               className="flex items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 py-4 font-semibold text-white transition-all hover:bg-green-600 active:scale-95"
-              onClick={() => handleContact("whatsapp")}
+              onClick={() => handleContact("whatsapp", contactPhone)}
               title="Chat on WhatsApp"
             >
               <span className="text-xl">📱</span>
@@ -187,6 +202,79 @@ const Scan = () => {
             </button>
           </div>
         </div>
+
+        {emergencyContactPhone && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-ink/70 dark:text-white/70">
+                Emergency Contact
+              </p>
+              <button
+                className="rounded-full border border-clay/20 bg-clay/10 px-3 py-1 text-xs font-semibold text-clay"
+                onClick={() => setShowEmergency((prev) => !prev)}
+              >
+                {showEmergency ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {showEmergency && (
+              <div className="glass space-y-3 p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-ink/50 dark:text-white/50">
+                    Emergency Contact
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-ink dark:text-white">
+                    {emergencyContactName || "Emergency Contact"}
+                  </p>
+                </div>
+                <div className="border-t border-ink/10 pt-3 dark:border-white/10">
+                  <p className="text-xs uppercase tracking-[0.3em] text-ink/50 dark:text-white/50">
+                    Emergency Number
+                  </p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-lg font-mono font-semibold text-ink dark:text-white">
+                      {emergencyMaskedPhone || emergencyContactPhone}
+                    </p>
+                    <button
+                      className="rounded-full bg-moss/10 px-3 py-1 text-xs font-semibold text-moss dark:bg-tide/10 dark:text-tide"
+                      onClick={copyEmergencyPhone}
+                      title="Copy emergency number"
+                    >
+                      {copied ? "✓ Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <button
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-clay px-4 py-3 font-semibold text-white transition-all hover:bg-clay/90 active:scale-95"
+                    onClick={() => handleContact("call", emergencyContactPhone)}
+                    title="Call emergency contact"
+                  >
+                    <span className="text-xl">🚨</span>
+                    <span>Call</span>
+                  </button>
+                  <button
+                    className="flex items-center justify-center gap-2 rounded-2xl border-2 border-clay px-4 py-3 font-semibold text-clay transition-all hover:bg-clay/5 active:scale-95"
+                    onClick={() => handleContact("sms", emergencyContactPhone)}
+                    title="Send emergency SMS"
+                  >
+                    <span className="text-xl">💬</span>
+                    <span>SMS</span>
+                  </button>
+                  <button
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-moss px-4 py-3 font-semibold text-white transition-all hover:bg-moss/90 active:scale-95 dark:bg-tide dark:text-ink"
+                    onClick={() => handleContact("whatsapp", emergencyContactPhone)}
+                    title="Chat emergency WhatsApp"
+                  >
+                    <span className="text-xl">📱</span>
+                    <span>WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Status Message */}
         {note && (

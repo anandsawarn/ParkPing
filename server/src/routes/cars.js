@@ -7,10 +7,22 @@ import { maskPhone } from "../utils/maskPhone.js";
 const router = express.Router();
 
 router.post("/", auth, async (req, res) => {
-  const { carNumber, carModel, carCompany, carColor, contactName, contactPhone } = req.body;
+  const {
+    carNumber,
+    carModel,
+    carCompany,
+    carColor,
+    contactName,
+    contactPhone,
+    emergencyContactName,
+    emergencyContactPhone
+  } = req.body;
   if (!carNumber || !carModel || !carCompany || !carColor || !contactName || !contactPhone) {
     return res.status(400).json({ message: "All car fields are required" });
   }
+
+  const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
+  const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
 
   const car = await Car.create({
     userId: req.user.id,
@@ -19,7 +31,9 @@ router.post("/", auth, async (req, res) => {
     carCompany,
     carColor,
     contactName,
-    contactPhone
+    contactPhone,
+    emergencyContactName: normalizedEmergencyName,
+    emergencyContactPhone: normalizedEmergencyPhone
   });
 
   return res.status(201).json({ car });
@@ -45,10 +59,22 @@ router.get("/:id/qr", auth, async (req, res) => {
 
 
 router.put("/:id", auth, async (req, res) => {
-  const { carNumber, carModel, carCompany, carColor, contactName, contactPhone } = req.body;
+  const {
+    carNumber,
+    carModel,
+    carCompany,
+    carColor,
+    contactName,
+    contactPhone,
+    emergencyContactName,
+    emergencyContactPhone
+  } = req.body;
   if (!carNumber || !carModel || !carCompany || !carColor || !contactName || !contactPhone) {
     return res.status(400).json({ message: "All car fields are required" });
   }
+
+  const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
+  const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
 
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
   if (!car) {
@@ -61,6 +87,8 @@ router.put("/:id", auth, async (req, res) => {
   car.carColor = carColor;
   car.contactName = contactName;
   car.contactPhone = contactPhone;
+  car.emergencyContactName = normalizedEmergencyName;
+  car.emergencyContactPhone = normalizedEmergencyPhone;
   await car.save();
 
   return res.json({ car });
@@ -78,11 +106,18 @@ router.delete("/:id", auth, async (req, res) => {
 
 router.get("/:id/public", async (req, res) => {
   const car = await Car.findById(req.params.id).select(
-    "carNumber carModel carCompany carColor contactName contactPhone"
+    "carNumber carModel carCompany carColor contactName contactPhone emergencyContactName emergencyContactPhone"
   );
   if (!car) {
     return res.status(404).json({ message: "Car not found" });
   }
+
+  const emergencyContact = car.emergencyContactPhone
+    ? {
+        name: car.emergencyContactName || "Emergency Contact",
+        phone: car.emergencyContactPhone
+      }
+    : null;
 
   return res.json({
     car: {
@@ -95,6 +130,8 @@ router.get("/:id/public", async (req, res) => {
     },
     maskedPhone: maskPhone(car.contactPhone),
     contactPhone: car.contactPhone,
+    emergencyContact,
+    emergencyMaskedPhone: emergencyContact ? maskPhone(emergencyContact.phone) : "",
     contactOptions: ["call", "sms", "whatsapp"]
   });
 });
