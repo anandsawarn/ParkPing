@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "./context/ThemeContext.jsx";
 import Landing from "./pages/Landing.jsx";
@@ -37,6 +38,7 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("pp_token");
@@ -55,59 +57,116 @@ const App = () => {
       </div>
 
       {!isScanPage && !isAdminPage && (
-        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-6">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-moss/20 text-xl sm:h-10 sm:w-10 sm:text-2xl dark:bg-moss/40">
-              🅿️
+        <header className="sticky top-0 z-30 border-b border-ink/10 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-darkCard/70">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-6">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3" onClick={() => setIsMenuOpen(false)}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-moss/20 text-xl sm:h-10 sm:w-10 sm:text-2xl dark:bg-moss/40">
+                🅿️
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-xs uppercase tracking-[0.3em] text-moss dark:text-moss">ParkPing</p>
+                <h1 className="font-display text-xl">Smart Contact</h1>
+              </div>
+            </Link>
+            <nav className="flex items-center gap-2 text-sm font-semibold sm:gap-4">
+              <button
+                onClick={toggleTheme}
+                className="rounded-full border border-ink/20 bg-white/70 p-2 dark:border-white/20 dark:bg-darkCard/70"
+                title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              >
+                {theme === "light" ? "🌙" : "☀️"}
+              </button>
+              <button
+                className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-xs sm:hidden dark:border-white/20 dark:bg-darkCard/70"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                aria-expanded={isMenuOpen}
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? "Close" : "Menu"}
+              </button>
+              {isAuthed() ? (
+                <>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/dashboard">
+                    Dashboard
+                  </Link>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/cars/new">
+                    Add car
+                  </Link>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/messages">
+                    Messages
+                  </Link>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/change-password">
+                    Security
+                  </Link>
+                  <button
+                    className="hidden rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-xs sm:inline-flex sm:px-4 sm:text-sm dark:border-white/20 dark:bg-darkCard/70"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/">
+                    Home
+                  </Link>
+                  <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/login">
+                    Login
+                  </Link>
+                  <Link className="hidden rounded-full bg-ink px-3 py-2 text-xs text-white sm:inline-flex sm:px-4 sm:text-sm dark:bg-white dark:text-ink" to="/signup">
+                    Get started
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
+          {isMenuOpen && (
+            <div className="border-t border-ink/10 bg-white/80 px-4 pb-4 pt-2 text-sm dark:border-white/10 dark:bg-darkCard/80 sm:hidden">
+              <div className="flex flex-col gap-3 font-semibold">
+                {isAuthed() ? (
+                  <>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      Dashboard
+                    </Link>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/cars/new" onClick={() => setIsMenuOpen(false)}>
+                      Add car
+                    </Link>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/messages" onClick={() => setIsMenuOpen(false)}>
+                      Messages
+                    </Link>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/change-password" onClick={() => setIsMenuOpen(false)}>
+                      Security
+                    </Link>
+                    <button
+                      className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-left text-xs dark:border-white/20 dark:bg-darkCard/70"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/" onClick={() => setIsMenuOpen(false)}>
+                      Home
+                    </Link>
+                    <Link className="hover:text-clay dark:hover:text-tide" to="/login" onClick={() => setIsMenuOpen(false)}>
+                      Login
+                    </Link>
+                    <Link
+                      className="rounded-full bg-ink px-3 py-2 text-center text-xs text-white dark:bg-white dark:text-ink"
+                      to="/signup"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Get started
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="hidden sm:block">
-              <p className="text-xs uppercase tracking-[0.3em] text-moss dark:text-moss">ParkPing</p>
-              <h1 className="font-display text-xl">Smart Contact</h1>
-            </div>
-          </Link>
-          <nav className="flex items-center gap-2 text-sm font-semibold sm:gap-4">
-            <button
-              onClick={toggleTheme}
-              className="rounded-full border border-ink/20 bg-white/70 p-2 dark:border-white/20 dark:bg-darkCard/70"
-              title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            >
-              {theme === "light" ? "🌙" : "☀️"}
-            </button>
-            {isAuthed() ? (
-              <>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/dashboard">
-                  Dashboard
-                </Link>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/cars/new">
-                  Add car
-                </Link>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/messages">
-                  Messages
-                </Link>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/change-password">
-                  Security
-                </Link>
-                <button
-                  className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-xs sm:px-4 sm:text-sm dark:border-white/20 dark:bg-darkCard/70"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/">
-                  Home
-                </Link>
-                <Link className="hidden hover:text-clay sm:inline dark:hover:text-tide" to="/login">
-                  Login
-                </Link>
-                <Link className="rounded-full bg-ink px-3 py-2 text-xs text-white sm:px-4 sm:text-sm dark:bg-white dark:text-ink" to="/signup">
-                  Get started
-                </Link>
-              </>
-            )}
-          </nav>
+          )}
         </header>
       )}
 
