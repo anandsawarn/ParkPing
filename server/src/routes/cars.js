@@ -2,9 +2,7 @@ import express from "express";
 import qrcode from "qrcode";
 import auth from "../middleware/auth.js";
 import Car from "../models/Car.js";
-import User from "../models/User.js";
 import { maskPhone } from "../utils/maskPhone.js";
-import { sendEmail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 
@@ -45,111 +43,6 @@ router.get("/:id/qr", auth, async (req, res) => {
   return res.json({ dataUrl });
 });
 
-const getQuoteForCar = (car) => {
-  const QUOTES = [
-    "Please move the vehicle if it is blocking access. Thank you.",
-    "Kindly help clear the way. Your cooperation means a lot.",
-    "A quick move would help everyone. Thanks for understanding.",
-    "Parking ping: please free the path when convenient. Appreciate it.",
-    "Your car is in the way. A small move, a big relief. Thanks."
-  ];
-
-  const hashString = (value) => {
-    let hash = 0;
-    for (let i = 0; i < value.length; i += 1) {
-      hash = (hash << 5) - hash + value.charCodeAt(i);
-      hash |= 0;
-    }
-    return Math.abs(hash);
-  };
-
-  if (!car || !car._id) return QUOTES[0];
-  const index = hashString(car._id) % QUOTES.length;
-  return QUOTES[index];
-};
-
-const parseImageDataUrl = (imageDataUrl) => {
-  if (typeof imageDataUrl !== "string" || !imageDataUrl.startsWith("data:image/")) {
-    return null;
-  }
-
-  const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.*)$/);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    contentType: match[1],
-    buffer: Buffer.from(match[2], "base64")
-  };
-};
-
-const getImageExtension = (contentType) => {
-  if (contentType === "image/jpeg") return "jpg";
-  if (contentType === "image/webp") return "webp";
-  return "png";
-};
-
-router.post("/:id/send-qr", auth, async (req, res) => {
-  const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
-  if (!car) {
-    return res.status(404).json({ message: "Car not found" });
-  }
-
-  const user = await User.findById(req.user.id).select("email name");
-  if (!user?.email) {
-    return res.status(400).json({ message: "User email not found" });
-  }
-
-  try {
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    const payload = `${clientUrl}/scan/${car._id}`;
-    const parsedImage = parseImageDataUrl(req.body?.imageDataUrl);
-    const fallbackQr = parsedImage
-      ? null
-      : await qrcode.toBuffer(payload, { margin: 1, width: 320 });
-    const imageContentType = parsedImage?.contentType || "image/png";
-    const imageBuffer = parsedImage?.buffer || fallbackQr;
-    const attachment = {
-      filename: `parkping-${car.carNumber || "car"}-card.${getImageExtension(imageContentType)}`,
-      content: imageBuffer,
-      contentType: imageContentType,
-      contentDisposition: "attachment"
-    };
-    const inlineImage = imageBuffer.toString("base64");
-
-    const htmlContent = `
-      <p>Hi ${user.name || "there"},</p>
-      <p>Your ParkPing card image is attached below and also as a file.</p>
-      <div style="margin:16px 0;">
-        <img
-          alt="ParkPing Card"
-          src="data:${imageContentType};base64,${inlineImage}"
-          style="max-width:100%;width:600px;border-radius:12px;display:block;"
-        />
-      </div>
-      <p>Please print it and stick it on your car windshield.</p>
-      <p>Anyone scanning the QR can reach you securely.</p>
-    `;
-
-    await sendEmail({
-      to: user.email,
-      subject: `Your ParkPing QR - ${car.carNumber}`,
-      text: `Hi ${user.name || "there"}, your ParkPing card image is attached. Print and stick it on your car windshield.`,
-      html: htmlContent,
-      attachments: [attachment]
-    });
-
-    return res.json({ message: "QR card sent to your email" });
-  } catch (error) {
-    console.error("Send QR email failed", {
-      message: error?.message,
-      code: error?.code,
-      response: error?.response
-    });
-    return res.status(500).json({ message: "Failed to send QR email" });
-  }
-});
 
 router.put("/:id", auth, async (req, res) => {
   const { carNumber, carModel, carCompany, carColor, contactName, contactPhone } = req.body;

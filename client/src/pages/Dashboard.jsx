@@ -115,8 +115,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [cars, setCars] = useState([]);
   const [qrMap, setQrMap] = useState({});
-  const [emailStatus, setEmailStatus] = useState({});
-  const [emailBusyId, setEmailBusyId] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [dialogState, setDialogState] = useState({
@@ -150,31 +148,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleEmailQr = async (carId, carNumber, quote) => {
-    setEmailBusyId(carId);
-    setEmailStatus((prev) => ({ ...prev, [carId]: "Sending..." }));
-    try {
-      let dataUrl = qrMap[carId];
-      if (!dataUrl) {
-        const qrData = await apiFetch(`/api/cars/${carId}/qr`);
-        dataUrl = qrData.dataUrl;
-        setQrMap((prev) => ({ ...prev, [carId]: dataUrl }));
-      }
-
-      const cardDataUrl = await buildQrCardDataUrl(dataUrl, carNumber, quote);
-      const data = await apiFetch(`/api/cars/${carId}/send-qr`, {
-        method: "POST",
-        body: JSON.stringify({ imageDataUrl: cardDataUrl })
-      });
-      setEmailStatus((prev) => ({ ...prev, [carId]: data.message || "✓ Sent" }));
-      setTimeout(() => setEmailStatus((prev) => ({ ...prev, [carId]: "" })), 3000);
-    } catch (err) {
-      setEmailStatus((prev) => ({ ...prev, [carId]: "✗ Failed" }));
-      setTimeout(() => setEmailStatus((prev) => ({ ...prev, [carId]: "" })), 3000);
-    } finally {
-      setEmailBusyId(null);
-    }
-  };
 
   const openDeleteDialog = (carId, carNumber) => {
     setDialogState({
@@ -252,13 +225,6 @@ const Dashboard = () => {
                     Get QR
                   </button>
                   <button
-                    className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-sm sm:px-4 dark:border-white/20 dark:bg-darkCard/70"
-                    onClick={() => handleEmailQr(car._id, car.carNumber, getQuoteForCar(car))}
-                    disabled={emailBusyId === car._id}
-                  >
-                    {emailBusyId === car._id ? "Sending..." : "Email QR"}
-                  </button>
-                  <button
                     className="rounded-full border border-moss/20 bg-moss/10 px-3 py-2 text-sm text-moss sm:px-4 dark:border-moss/20 dark:bg-moss/10 dark:text-tide"
                     onClick={() => openEditDialog(car._id, car.carNumber)}
                   >
@@ -301,9 +267,6 @@ const Dashboard = () => {
                   >
                     Download FASTag QR
                   </button>
-                  {emailStatus[car._id] ? (
-                    <p className="text-sm text-ink/70 dark:text-white/70">{emailStatus[car._id]}</p>
-                  ) : null}
                 </div>
               ) : null}
             </div>
