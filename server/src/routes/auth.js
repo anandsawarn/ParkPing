@@ -15,9 +15,18 @@ const signToken = (userId) => {
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
+const PHONE_MIN_LEN = 10;
+const PHONE_MAX_LEN = 12;
 
 const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+const normalizePhone = (value) => (value || "").replace(/[^0-9]/g, "");
+
+const isPhoneValid = (value) => {
+  const digits = normalizePhone(value);
+  return digits.length >= PHONE_MIN_LEN && digits.length <= PHONE_MAX_LEN;
 };
 
 const sendOtpEmail = async (email, otp, context) => {
@@ -38,6 +47,12 @@ router.post("/signup", async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
+  if (!isPhoneValid(phone)) {
+    return res
+      .status(400)
+      .json({ message: "Phone number must be 10-12 digits" });
+  }
+
   const existing = await User.findOne({ email });
   if (existing && existing.isVerified) {
     return res.status(409).json({ message: "Email already registered" });
@@ -51,11 +66,12 @@ router.post("/signup", async (req, res) => {
   const otpHash = await bcrypt.hash(otp, 10);
   const otpExpiry = Date.now() + OTP_EXPIRY_MS;
   const passwordHash = await bcrypt.hash(password, 10);
+  const normalizedPhone = normalizePhone(phone);
 
   let user = existing;
   if (user) {
     user.name = name;
-    user.phone = phone;
+    user.phone = normalizedPhone;
     user.passwordHash = passwordHash;
     user.signupOtpHash = otpHash;
     user.signupOtpExpiry = otpExpiry;
@@ -65,7 +81,7 @@ router.post("/signup", async (req, res) => {
   } else {
     user = await User.create({
       name,
-      phone,
+      phone: normalizedPhone,
       email,
       passwordHash,
       isVerified: false,

@@ -57,12 +57,28 @@ const EditCar = () => {
     setError("");
     setBusy(true);
 
+    const contactDigits = form.contactPhone.replace(/[^0-9]/g, "");
+    if (contactDigits.length < 10 || contactDigits.length > 12) {
+      setError("Contact phone must be 10-12 digits.");
+      setBusy(false);
+      return;
+    }
+
     const hasEmergencyName = Boolean(form.emergencyContactName.trim());
     const hasEmergencyPhone = Boolean(form.emergencyContactPhone.trim());
     if ((hasEmergencyName && !hasEmergencyPhone) || (!hasEmergencyName && hasEmergencyPhone)) {
       setError("Emergency contact name and phone must be provided together.");
       setBusy(false);
       return;
+    }
+
+    if (hasEmergencyPhone) {
+      const emergencyDigits = form.emergencyContactPhone.replace(/[^0-9]/g, "");
+      if (emergencyDigits.length < 10 || emergencyDigits.length > 12) {
+        setError("Emergency phone must be 10-12 digits.");
+        setBusy(false);
+        return;
+      }
     }
 
     try {

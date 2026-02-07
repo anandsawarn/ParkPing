@@ -5,6 +5,15 @@ import Car from "../models/Car.js";
 import { maskPhone } from "../utils/maskPhone.js";
 
 const router = express.Router();
+const PHONE_MIN_LEN = 10;
+const PHONE_MAX_LEN = 12;
+
+const normalizePhone = (value) => (value || "").replace(/[^0-9]/g, "");
+
+const isPhoneValid = (value) => {
+  const digits = normalizePhone(value);
+  return digits.length >= PHONE_MIN_LEN && digits.length <= PHONE_MAX_LEN;
+};
 
 router.post("/", auth, async (req, res) => {
   const {
@@ -21,11 +30,20 @@ router.post("/", auth, async (req, res) => {
     return res.status(400).json({ message: "All car fields are required" });
   }
 
+  if (!isPhoneValid(contactPhone)) {
+    return res.status(400).json({ message: "Contact phone must be 10-12 digits" });
+  }
+
   const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
   const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
+  const normalizedContactPhone = normalizePhone(contactPhone);
 
   if ((normalizedEmergencyName && !normalizedEmergencyPhone) || (!normalizedEmergencyName && normalizedEmergencyPhone)) {
     return res.status(400).json({ message: "Emergency contact name and phone must be provided together" });
+  }
+
+  if (normalizedEmergencyPhone && !isPhoneValid(normalizedEmergencyPhone)) {
+    return res.status(400).json({ message: "Emergency phone must be 10-12 digits" });
   }
 
   const car = await Car.create({
@@ -35,9 +53,9 @@ router.post("/", auth, async (req, res) => {
     carCompany,
     carColor,
     contactName,
-    contactPhone,
+    contactPhone: normalizedContactPhone,
     emergencyContactName: normalizedEmergencyName,
-    emergencyContactPhone: normalizedEmergencyPhone
+    emergencyContactPhone: normalizedEmergencyPhone ? normalizePhone(normalizedEmergencyPhone) : undefined
   });
 
   return res.status(201).json({ car });
@@ -77,11 +95,20 @@ router.put("/:id", auth, async (req, res) => {
     return res.status(400).json({ message: "All car fields are required" });
   }
 
+  if (!isPhoneValid(contactPhone)) {
+    return res.status(400).json({ message: "Contact phone must be 10-12 digits" });
+  }
+
   const normalizedEmergencyName = emergencyContactName?.trim() || undefined;
   const normalizedEmergencyPhone = emergencyContactPhone?.trim() || undefined;
+  const normalizedContactPhone = normalizePhone(contactPhone);
 
   if ((normalizedEmergencyName && !normalizedEmergencyPhone) || (!normalizedEmergencyName && normalizedEmergencyPhone)) {
     return res.status(400).json({ message: "Emergency contact name and phone must be provided together" });
+  }
+
+  if (normalizedEmergencyPhone && !isPhoneValid(normalizedEmergencyPhone)) {
+    return res.status(400).json({ message: "Emergency phone must be 10-12 digits" });
   }
 
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
@@ -94,9 +121,9 @@ router.put("/:id", auth, async (req, res) => {
   car.carCompany = carCompany;
   car.carColor = carColor;
   car.contactName = contactName;
-  car.contactPhone = contactPhone;
+  car.contactPhone = normalizedContactPhone;
   car.emergencyContactName = normalizedEmergencyName;
-  car.emergencyContactPhone = normalizedEmergencyPhone;
+  car.emergencyContactPhone = normalizedEmergencyPhone ? normalizePhone(normalizedEmergencyPhone) : undefined;
   await car.save();
 
   return res.json({ car });

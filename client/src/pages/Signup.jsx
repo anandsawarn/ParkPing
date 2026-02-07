@@ -29,6 +29,13 @@ const Signup = () => {
 
     try {
       if (step === "signup") {
+        const phoneDigits = form.phone.replace(/[^0-9]/g, "");
+        if (phoneDigits.length < 10 || phoneDigits.length > 12) {
+          setError("Phone number must be 10-12 digits.");
+          setBusy(false);
+          return;
+        }
+
         const data = await apiFetch("/api/auth/signup", {
           method: "POST",
           body: JSON.stringify(form)
