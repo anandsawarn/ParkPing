@@ -51,57 +51,64 @@ const drawWrappedText = (ctx, text, x, y, maxWidth, lineHeight) => {
   }
 };
 
-const downloadQrWithQuote = (dataUrl, carNumber, quote) => {
-  const image = new Image();
-  image.onload = () => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 800;
-    canvas.height = 500;
-    const ctx = canvas.getContext("2d");
+const buildQrCardDataUrl = (dataUrl, carNumber, quote) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 500;
+      const ctx = canvas.getContext("2d");
 
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, "#0066cc");
-    gradient.addColorStop(1, "#004c99");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, "#0066cc");
+      gradient.addColorStop(1, "#004c99");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.fillRect(0, 0, canvas.width, 80);
-    ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.fillRect(0, 0, canvas.width, 80);
+      ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 32px Trebuchet MS";
-    ctx.fillText("ParkPing", 40, 55);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 32px Trebuchet MS";
+      ctx.fillText("ParkPing", 40, 55);
 
-    ctx.font = "16px Trebuchet MS";
-    ctx.fillText("Smart Parking Contact", 40, canvas.height - 35);
+      ctx.font = "16px Trebuchet MS";
+      ctx.fillText("Smart Parking Contact", 40, canvas.height - 35);
 
-    const qrSize = 240;
-    const qrX = canvas.width - qrSize - 50;
-    const qrY = (canvas.height - qrSize) / 2;
+      const qrSize = 240;
+      const qrX = canvas.width - qrSize - 50;
+      const qrY = (canvas.height - qrSize) / 2;
 
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
-    ctx.drawImage(image, qrX, qrY, qrSize, qrSize);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
+      ctx.drawImage(image, qrX, qrY, qrSize, qrSize);
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 22px Trebuchet MS";
-    ctx.fillText(carNumber || "CAR", 40, 140);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 22px Trebuchet MS";
+      ctx.fillText(carNumber || "CAR", 40, 140);
 
-    ctx.font = "18px Trebuchet MS";
-    const maxWidth = canvas.width - qrSize - 120;
-    drawWrappedText(ctx, quote, 40, 180, maxWidth, 28);
+      ctx.font = "18px Trebuchet MS";
+      const maxWidth = canvas.width - qrSize - 120;
+      drawWrappedText(ctx, quote, 40, 180, maxWidth, 28);
 
-    ctx.fillStyle = "#ff6b35";
-    ctx.font = "bold 16px Trebuchet MS";
-    ctx.fillText("SCAN TO CONTACT →", 40, canvas.height - 100);
+      ctx.fillStyle = "#ff6b35";
+      ctx.font = "bold 16px Trebuchet MS";
+      ctx.fillText("SCAN TO CONTACT →", 40, canvas.height - 100);
 
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `parkping-${carNumber}-fastag.png`;
-    link.click();
-  };
-  image.src = dataUrl;
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    image.onerror = () => reject(new Error("QR image failed to load"));
+    image.src = dataUrl;
+  });
+
+const downloadQrWithQuote = async (dataUrl, carNumber, quote) => {
+  const cardDataUrl = await buildQrCardDataUrl(dataUrl, carNumber, quote);
+  const link = document.createElement("a");
+  link.href = cardDataUrl;
+  link.download = `parkping-${carNumber}-fastag.png`;
+  link.click();
 };
 
 const Dashboard = () => {
@@ -147,10 +154,14 @@ const Dashboard = () => {
     setEmailBusyId(carId);
     setEmailStatus((prev) => ({ ...prev, [carId]: "Sending..." }));
     try {
-      const data = await apiFetch(`/api/cars/${carId}/send-qr`, { method: "POST" });
-      setEmailStatus((prev) => ({ ...prev, [carId]: data.message || "QR emailed" }));
+      const data = await apiFetch(`/api/cars/${carId}/send-qr`, {
+        method: "POST"
+      });
+      setEmailStatus((prev) => ({ ...prev, [carId]: data.message || "✓ Sent" }));
+      setTimeout(() => setEmailStatus((prev) => ({ ...prev, [carId]: "" })), 3000);
     } catch (err) {
-      setEmailStatus((prev) => ({ ...prev, [carId]: err.message || "Failed to send" }));
+      setEmailStatus((prev) => ({ ...prev, [carId]: "✗ Failed" }));
+      setTimeout(() => setEmailStatus((prev) => ({ ...prev, [carId]: "" })), 3000);
     } finally {
       setEmailBusyId(null);
     }
