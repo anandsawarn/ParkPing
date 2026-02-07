@@ -1,5 +1,4 @@
 import express from "express";
-import PDFDocument from "pdfkit";
 import qrcode from "qrcode";
 import auth from "../middleware/auth.js";
 import Car from "../models/Car.js";
@@ -69,41 +68,21 @@ const getQuoteForCar = (car) => {
   return QUOTES[index];
 };
 
-const buildFastagPdf = ({ carNumber, quote, qrBuffer, userName }) =>
-  new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: [640, 360], margin: 0 });
-    const chunks = [];
+const parseImageDataUrl = (imageDataUrl) => {
+  if (typeof imageDataUrl !== "string" || !imageDataUrl.startsWith("data:image/")) {
+    return null;
+  }
 
-    doc.on("data", (chunk) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+  const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.*)$/);
+  if (!match) {
+    return null;
+  }
 
-    doc.rect(0, 0, 640, 360).fill("#0b5db7");
-    doc.fillColor("#0a4d97").rect(0, 0, 640, 60).fill();
-    doc.fillColor("#0a4d97").rect(0, 300, 640, 60).fill();
-
-    doc.fillColor("white").fontSize(26).text("ParkPing", 40, 20);
-    doc.fontSize(12).text("Smart Parking Contact", 40, 50);
-
-    doc.fontSize(20).text(carNumber || "CAR", 40, 110);
-    doc.fontSize(12).text(quote, 40, 145, { width: 340, lineGap: 2 });
-
-    doc.fillColor("#ff6b35").fontSize(12).text("SCAN TO CONTACT ->", 40, 250);
-
-    doc.fillColor("white").rect(430, 90, 160, 160).fill();
-    doc.image(qrBuffer, 440, 100, { fit: [140, 140] });
-
-    doc.fillColor("white")
-      .fontSize(10)
-      .text(
-        `Hi ${userName || "there"}, print this card and stick it on your car windshield.`,
-        40,
-        305,
-        { width: 560 }
-      );
-
-    doc.end();
-  });
+  return {
+    contentType: match[1],
+    buffer: Buffer.from(match[2], "base64")
+  };
+};
 
 router.post("/:id/send-qr", auth, async (req, res) => {
   const car = await Car.findOne({ _id: req.params.id, userId: req.user.id });
@@ -119,33 +98,33 @@ router.post("/:id/send-qr", auth, async (req, res) => {
   try {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const payload = `${clientUrl}/scan/${car._id}`;
-    const qrBuffer = await qrcode.toBuffer(payload, { margin: 1, width: 320 });
-
-    const pdfBuffer = await buildFastagPdf({
-      carNumber: car.carNumber,
-      quote: getQuoteForCar(car),
-      qrBuffer,
-      userName: user.name
-    });
+    const parsedImage = parseImageDataUrl(req.body?.imageDataUrl);
+    const attachment = parsedImage
+      ? {
+          filename: `parkping-${car.carNumber || "car"}-card.png`,
+          content: parsedImage.buffer,
+          contentType: parsedImage.contentType || "image/png",
+          contentDisposition: "attachment"
+        }
+      : {
+          filename: `parkping-${car.carNumber || "car"}-qr.png`,
+          content: await qrcode.toBuffer(payload, { margin: 1, width: 320 }),
+          contentType: "image/png",
+          contentDisposition: "attachment"
+        };
 
     const htmlContent = `
       <p>Hi ${user.name || "there"},</p>
-      <p>Your ParkPing card is attached as a PDF. Please print it and stick it on your car windshield.</p>
+      <p>Your ParkPing card image is attached. Please print it and stick it on your car windshield.</p>
       <p>Anyone scanning the QR can reach you securely.</p>
     `;
 
     await sendEmail({
       to: user.email,
       subject: `Your ParkPing QR - ${car.carNumber}`,
-      text: `Hi ${user.name || "there"}, your ParkPing card PDF is attached. Print and stick it on your car windshield.`,
+      text: `Hi ${user.name || "there"}, your ParkPing card image is attached. Print and stick it on your car windshield.`,
       html: htmlContent,
-      attachments: [
-        {
-          filename: `parkping-${car.carNumber || "car"}-card.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf"
-        }
-      ]
+      attachments: [attachment]
     });
 
     return res.json({ message: "QR card sent to your email" });

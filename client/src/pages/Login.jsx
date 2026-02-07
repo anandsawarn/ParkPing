@@ -23,6 +23,9 @@ const Login = () => {
         body: JSON.stringify(form)
       });
       localStorage.setItem("pp_token", data.token);
+      if (data.user) {
+        localStorage.setItem("pp_user", JSON.stringify(data.user));
+      }
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);

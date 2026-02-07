@@ -150,12 +150,21 @@ const Dashboard = () => {
     }
   };
 
-  const handleEmailQr = async (carId) => {
+  const handleEmailQr = async (carId, carNumber, quote) => {
     setEmailBusyId(carId);
     setEmailStatus((prev) => ({ ...prev, [carId]: "Sending..." }));
     try {
+      let dataUrl = qrMap[carId];
+      if (!dataUrl) {
+        const qrData = await apiFetch(`/api/cars/${carId}/qr`);
+        dataUrl = qrData.dataUrl;
+        setQrMap((prev) => ({ ...prev, [carId]: dataUrl }));
+      }
+
+      const cardDataUrl = await buildQrCardDataUrl(dataUrl, carNumber, quote);
       const data = await apiFetch(`/api/cars/${carId}/send-qr`, {
-        method: "POST"
+        method: "POST",
+        body: JSON.stringify({ imageDataUrl: cardDataUrl })
       });
       setEmailStatus((prev) => ({ ...prev, [carId]: data.message || "✓ Sent" }));
       setTimeout(() => setEmailStatus((prev) => ({ ...prev, [carId]: "" })), 3000);
@@ -244,7 +253,7 @@ const Dashboard = () => {
                   </button>
                   <button
                     className="rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-sm sm:px-4 dark:border-white/20 dark:bg-darkCard/70"
-                    onClick={() => handleEmailQr(car._id)}
+                    onClick={() => handleEmailQr(car._id, car.carNumber, getQuoteForCar(car))}
                     disabled={emailBusyId === car._id}
                   >
                     {emailBusyId === car._id ? "Sending..." : "Email QR"}

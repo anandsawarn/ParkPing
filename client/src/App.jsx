@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "./context/ThemeContext.jsx";
+import { apiFetch } from "./utils/api.js";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
@@ -39,10 +40,45 @@ const App = () => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("pp_user");
+    return stored ? JSON.parse(stored) : null;
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("pp_token");
+    localStorage.removeItem("pp_user");
     navigate("/login");
+  };
+
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isAuthed() || user) return;
+
+    apiFetch("/api/auth/me")
+      .then((data) => {
+        if (data?.user) {
+          setUser(data.user);
+          localStorage.setItem("pp_user", JSON.stringify(data.user));
+        }
+      })
+      .catch(() => {
+        // Ignore, user will be fetched next time or re-login.
+      });
+  }, [user]);
+
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join("");
   };
 
   const isScanPage = location.pathname.startsWith("/scan/");
@@ -104,6 +140,28 @@ const App = () => {
                   >
                     Logout
                   </button>
+                  <div className="relative hidden sm:block">
+                    <button
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/20 bg-white/70 text-sm font-semibold dark:border-white/20 dark:bg-darkCard/70"
+                      onClick={() => setProfileOpen((prev) => !prev)}
+                      aria-expanded={profileOpen}
+                      aria-label="Open profile menu"
+                    >
+                      {getInitials(user?.name)}
+                    </button>
+                    {profileOpen && (
+                      <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-ink/10 bg-white/95 p-3 text-left shadow-lg dark:border-white/10 dark:bg-darkCard/95">
+                        <p className="text-sm font-semibold">{user?.name || "User"}</p>
+                        <p className="text-xs text-ink/60 dark:text-white/60">{user?.email || ""}</p>
+                        <button
+                          className="mt-3 w-full rounded-full border border-ink/20 bg-white/70 px-3 py-2 text-xs dark:border-white/20 dark:bg-darkCard/70"
+                          onClick={handleLogout}
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
