@@ -105,25 +105,30 @@ router.post("/:id/send-qr", auth, async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     const payload = `${clientUrl}/scan/${car._id}`;
     const parsedImage = parseImageDataUrl(req.body?.imageDataUrl);
-    const attachment = parsedImage
-      ? {
-          filename: `parkping-${car.carNumber || "car"}-card.${getImageExtension(
-            parsedImage.contentType
-          )}`,
-          content: parsedImage.buffer,
-          contentType: parsedImage.contentType || "image/png",
-          contentDisposition: "attachment"
-        }
-      : {
-          filename: `parkping-${car.carNumber || "car"}-qr.png`,
-          content: await qrcode.toBuffer(payload, { margin: 1, width: 320 }),
-          contentType: "image/png",
-          contentDisposition: "attachment"
-        };
+    const fallbackQr = parsedImage
+      ? null
+      : await qrcode.toBuffer(payload, { margin: 1, width: 320 });
+    const imageContentType = parsedImage?.contentType || "image/png";
+    const imageBuffer = parsedImage?.buffer || fallbackQr;
+    const attachment = {
+      filename: `parkping-${car.carNumber || "car"}-card.${getImageExtension(imageContentType)}`,
+      content: imageBuffer,
+      contentType: imageContentType,
+      contentDisposition: "attachment"
+    };
+    const inlineImage = imageBuffer.toString("base64");
 
     const htmlContent = `
       <p>Hi ${user.name || "there"},</p>
-      <p>Your ParkPing card image is attached. Please print it and stick it on your car windshield.</p>
+      <p>Your ParkPing card image is attached below and also as a file.</p>
+      <div style="margin:16px 0;">
+        <img
+          alt="ParkPing Card"
+          src="data:${imageContentType};base64,${inlineImage}"
+          style="max-width:100%;width:600px;border-radius:12px;display:block;"
+        />
+      </div>
+      <p>Please print it and stick it on your car windshield.</p>
       <p>Anyone scanning the QR can reach you securely.</p>
     `;
 
